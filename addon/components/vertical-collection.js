@@ -90,6 +90,25 @@ export default Component.extend({
   itemTagName: '',
 
   /**!
+   * Used if you want to explicitly set the class of `vertical-item`s
+   */
+  itemClassNames: '',
+
+  /**!
+   * Used if due to css restriction vertical-collection will always have
+   * position().top === 0
+   * you can define another css selector to calculate top position on scroll
+   */
+  scrollableContainer: '',
+
+  /**!
+   * Used if due to css restriction your $(item).position() will always return 0
+   * in such case you can set it to 'offset'
+   */
+  methodusedForItemPosition: 'position',
+
+
+  /**!
    * The `keyForId` property improves performance when the underlying array is changed but most
    * of the items remain the same.  It is used by the [MagicArrayMixin](./magic-array.md).
    *
@@ -352,7 +371,7 @@ export default Component.extend({
     var items = this.get('content');
     var maxIndex = get(items, 'length') - 1;
     var minIndex = 0;
-    var midIndex;
+    var midIndex, componentPosition;
 
     if (maxIndex < 0) { return 0; }
 
@@ -360,9 +379,15 @@ export default Component.extend({
 
       midIndex = Math.floor((minIndex + maxIndex) / 2);
 
+      if (this.get('methodusedForItemPosition') == 'offset') {
+        componentPosition = component.$().offset().top;
+      } else {
+        componentPosition = component.$().position().top;
+      }
+
       // in case of not full-window scrolling
       var component = this.childForItem(valueForIndex(items, midIndex));
-      var viewBottom = component.$().position().top + component.get('_height') + adj;
+      var viewBottom = componentPosition + component.get('_height') + adj;
 
       if (viewBottom > viewportTop) {
         maxIndex = midIndex - 1;
@@ -401,10 +426,11 @@ export default Component.extend({
       return false;
     }
 
+    var scrollableContainer = this.get('scrollableContainer') ? Ember.$(this.get('scrollableContainer')) : this.$();
     var edges = this.get('_edges') || this._calculateEdges();
     var items = this.get('content');
-
-    var currentViewportBound = edges.viewportTop + this.$().position().top;
+    
+    var currentViewportBound = edges.viewportTop + scrollableContainer.position().top;
     var currentUpperBound = edges.invisibleTop;
 
     if (currentUpperBound < currentViewportBound) {
@@ -434,8 +460,14 @@ export default Component.extend({
     while (bottomViewIndex <= lastIndex) {
 
       var component = this.childForItem(valueForIndex(items, bottomViewIndex));
+      var viewTop;
 
-      var viewTop = component.$().position().top;
+      if (this.get('methodusedForItemPosition') == 'offset') {
+        viewTop = component.$().offset().top;
+      } else {
+        viewTop = component.$().position().top;
+      }
+
       var viewBottom = viewTop + component.get('_height');
 
       // end the loop if we've reached the end of views we care about
@@ -568,6 +600,21 @@ export default Component.extend({
   _hasRendered: false,
   shouldRender: true,
   canRender: false,
+
+  shouldRenderList: computed('shouldRender', 'canRender', function() {
+    let shouldRender = this.get('shouldRender');
+    let canRender = this.get('canRender');
+    let doRender = shouldRender && canRender;
+    let _shouldDidChange = this.get('__shouldRender') !== shouldRender;
+
+    // trigger a cycle
+    if (doRender && _shouldDidChange) {
+      run.next(this, this._updateChildStates);
+    }
+
+    return doRender;
+  }),
+
 
   setup: observer('shouldRender', 'canRender', function() {
 
