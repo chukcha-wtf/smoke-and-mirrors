@@ -381,14 +381,16 @@ export default Component.extend({
 
       midIndex = Math.floor((minIndex + maxIndex) / 2);
 
-      if (this.get('methodusedForItemPosition') == 'offset') {
+
+      // in case of not full-window scrolling
+      var component = this.childForItem(valueForIndex(items, midIndex));
+      
+      if (this.get('methodusedForItemPosition') === 'offset') {
         componentPosition = component.$().offset().top;
       } else {
         componentPosition = component.$().position().top;
       }
-
-      // in case of not full-window scrolling
-      var component = this.childForItem(valueForIndex(items, midIndex));
+      
       var viewBottom = componentPosition + component.get('_height') + adj;
 
       if (viewBottom > viewportTop) {
@@ -464,7 +466,7 @@ export default Component.extend({
       var component = this.childForItem(valueForIndex(items, bottomViewIndex));
       var viewTop;
 
-      if (this.get('methodusedForItemPosition') == 'offset') {
+      if (this.get('methodusedForItemPosition') === 'offset') {
         viewTop = component.$().offset().top;
       } else {
         viewTop = component.$().position().top;
@@ -664,7 +666,9 @@ export default Component.extend({
   }),
 
   _allowRendering: on('didInsertElement', function() {
-    this.set('canRender', true);
+    run.next(()=>{
+      this.set('canRender', true);
+    });
   }),
 
 
