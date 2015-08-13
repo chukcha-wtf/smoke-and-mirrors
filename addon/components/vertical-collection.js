@@ -9,6 +9,8 @@ const {
   get: get,
   Component,
   assert,
+  computed,
+  run,
   on,
   observer,
 } = Ember;
